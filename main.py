@@ -169,7 +169,11 @@ def create_excel(domains_data):
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         for domain, data_dict in domains_data.items():
             for sheet_name, df in data_dict.items():
-                df.to_excel(writer, sheet_name=sheet_name, index=False)
+                try:
+                    sanitized_name = sheet_name+'_'+ domain.split('.')[0]
+                    df.to_excel(writer, sheet_name=sanitized_name[:31], index=False)
+                except: 
+                    break 
     output.seek(0)
     return output
 
