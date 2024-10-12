@@ -4,11 +4,12 @@ import http.client
 import json
 import base64
 from io import BytesIO
+from datetime import datetime
 
 # Set page layout to full width
 st.set_page_config(layout="wide")
 
-# Function to get the domain stats for a specific date
+# Function to get the domain stats for a specific date (for SEO Overview)
 def get_domain_stats(domain, api_id, secret_key, month, year, country_code):
     credentials = f"{api_id}:{secret_key}"
     encoded_credentials = base64.b64encode(credentials.encode("utf-8")).decode("utf-8")
@@ -19,6 +20,119 @@ def get_domain_stats(domain, api_id, secret_key, month, year, country_code):
     res = conn.getresponse()
     data = res.read()
     return json.loads(data.decode("utf-8"))
+
+# Function to extract most successful PPC keywords
+def get_most_successful_ppc_keywords(domain, api_id, secret_key, country_code):
+    credentials = f"{api_id}:{secret_key}"
+    encoded_credentials = base64.b64encode(credentials.encode("utf-8")).decode("utf-8")
+    headers = {'Authorization': f'Basic {encoded_credentials}'}
+
+    conn = http.client.HTTPSConnection("www.spyfu.com")
+    conn.request("GET", f"/apis/keyword_api/v2/ppc/getMostSuccessful?query={domain}&excludeDomain=offers.com&sortBy=SearchVolume&sortOrder=Descending&startingRow=1&pageSize=10&countryCode={country_code}&adultFilter=true", headers=headers)
+    res = conn.getresponse()
+    data = res.read()
+    return json.loads(data.decode("utf-8"))
+
+# Function to extract ad history with metrics
+def get_ad_history_with_metrics(domain, api_id, secret_key):
+    credentials = f"{api_id}:{secret_key}"
+    encoded_credentials = base64.b64encode(credentials.encode("utf-8")).decode("utf-8")
+    headers = {'Authorization': f'Basic {encoded_credentials}'}
+    conn = http.client.HTTPSConnection("www.spyfu.com")
+    conn.request("GET", f"/apis/ad_history_api/domain_ad_history_with_metrics?d={domain}&m=200&countryCode=FR", headers=headers)
+    res = conn.getresponse()
+    data = res.read()
+    return json.loads(data.decode("utf-8"))
+
+# Function to display ad history data
+def display_keyword_data(ad_history_data):
+    keyword_list = []
+    
+    # Check if "keywords" exists and is a list
+    if "keywords" in ad_history_data and isinstance(ad_history_data["keywords"], list):
+        for keyword_data in ad_history_data["keywords"]:
+            keyword = keyword_data.get("keyword", "N/A")
+            exact_cpc = keyword_data.get("exact_cpc", "N/A")
+            exact_daily_clicks = keyword_data.get("exact_daily_clicks", "N/A")
+            
+            # Loop through ads associated with each keyword
+            ads = keyword_data.get("ads", [])
+            for ad in ads:
+                ad_title = ad.get("title", "N/A")
+                ad_body = ad.get("body", "N/A")
+                ad_position = ad.get("position", "N/A")
+                search_date_id = ad.get("search_date_id", "N/A")
+
+                # Append all keyword and ad-related info into a list
+                keyword_list.append({
+                    "Keyword": keyword,
+                    "Exact CPC": exact_cpc,
+                    "Exact Daily Clicks": exact_daily_clicks,
+                    "Ad Title": ad_title,
+                    "Ad Body": ad_body,
+                    "Ad Position": ad_position,
+                    "Search Date ID": datetime.strptime(str(search_date_id), "%Y%m%d").date()
+                })
+
+    # Convert the list to a DataFrame and display it
+    if keyword_list:
+        df = pd.DataFrame(keyword_list)
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.write("No data available to display.")
+
+def display_top_ads(ad_history_data):
+    top_ads_list = []
+    
+    # Check if "top_ads" exists and is a list
+    if "top_ads" in ad_history_data and isinstance(ad_history_data["top_ads"], list):
+        for ad in ad_history_data["top_ads"]:
+            ad_id = ad.get("ad_id", "N/A")
+            title = ad.get("title", "N/A")
+            body = ad.get("body", "N/A")
+            avg_ad_pos = ad.get("avg_ad_pos", "N/A")
+            avg_total_ads = ad.get("avg_total_ads", "N/A")
+            coverage = ad.get("coverage", "N/A")
+
+
+            # Append all ad-related info into a list
+            top_ads_list.append({
+                "Ad ID": ad_id,
+                "Title": title,
+                "Body": body,
+                "Avg Ad Position": avg_ad_pos,
+                "Avg Total Ads": avg_total_ads,
+                "Coverage": coverage,
+            })
+
+    # Convert the list to a DataFrame and display it
+    if top_ads_list:
+        df = pd.DataFrame(top_ads_list)
+        st.subheader("Top Ads")
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.write("No top ads data available to display.")
+
+# Function to display PPC keyword data in a table
+def display_ppc_keywords(ppc_data):
+    if ppc_data and "results" in ppc_data:
+        ppc_keywords_list = []
+        for keyword in ppc_data["results"]:
+            ppc_keywords_list.append({
+                "Keyword": keyword.get("keyword"),
+                "Search Volume": keyword.get("searchVolume"),
+                "Total Monthly Clicks": keyword.get("totalMonthlyClicks"),
+                "Percent Paid Clicks": keyword.get("percentPaidClicks"),
+                "Broad Monthly Cost": keyword.get("broadMonthlyCost"),
+                "Broad Cost Per Click": keyword.get("broadCostPerClick")
+            })
+        
+        df = pd.DataFrame(ppc_keywords_list)
+        st.dataframe(df, use_container_width=True)  # Display a sortable dataframe with full width
+        return df
+    else:
+        st.write("No PPC keyword data available.")
+        return pd.DataFrame()
 
 # Function to extract valuable keywords from SpyFu
 def get_valuable_keywords(domain, api_id, secret_key, country_code):
@@ -56,6 +170,42 @@ def get_gained_clicks_keywords(domain, api_id, secret_key, country_code):
     data = res.read()
     return json.loads(data.decode("utf-8"))
 
+# Function to get the SEA stats for a specific date (Paid Keywords, PPC Clicks, PPC Budget)
+def get_sea_stats(domain, api_id, secret_key, month, year, country_code):
+    credentials = f"{api_id}:{secret_key}"
+    encoded_credentials = base64.b64encode(credentials.encode("utf-8")).decode("utf-8")
+    headers = {'Authorization': f'Basic {encoded_credentials}'}
+
+    conn = http.client.HTTPSConnection("www.spyfu.com")
+    conn.request("GET", f"/apis/domain_stats_api/v2/getDomainStatsForExactDate?month={month}&year={year}&domain={domain}&countryCode={country_code}", headers=headers)
+    res = conn.getresponse()
+    data = res.read()
+    return json.loads(data.decode("utf-8"))
+
+# Function to display KPIs for SEO Overview
+def display_kpis(stats, domain, backlinks_data=None):
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric(f"Organic Rank ({domain})", stats["averageOrganicRank"])
+    col2.metric(f"Organic Results ({domain})", stats["totalOrganicResults"])
+    col3.metric(f"Organic Clicks ({domain})", stats["monthlyOrganicClicks"])
+    
+    if backlinks_data is not None:
+        total_backlinks = len(backlinks_data)
+        col4.metric(f"Total Backlinks ({domain})", total_backlinks)
+    else:
+        col4.metric(f"Total Backlinks ({domain})", "N/A")
+
+# Function to display SEA KPIs (Paid Keywords, PPC Clicks, PPC Budget)
+def display_sea_kpis(sea_data, domain):
+    if sea_data and "results" in sea_data and sea_data["results"]:
+        stats = sea_data["results"][0]
+        col1, col2, col3 = st.columns(3)
+        col1.metric(f"Paid Keywords ({domain})", stats["totalAdsPurchased"])
+        col2.metric(f"Est. Monthly PPC Clicks ({domain})", round(stats["monthlyPaidClicks"],2))
+        col3.metric(f"Est. Monthly PPC Budget ({domain})", stats["monthlyBudget"])
+    else:
+        st.write(f"No SEA data available for {domain}")
+
 # Function to handle competitors input from Excel or manual input
 def get_competitor_domains():
     competitor_option = st.radio("How would you like to provide competitor domains?", ('Upload Excel File', 'Enter Manually'))
@@ -74,20 +224,6 @@ def get_competitor_domains():
             competitor_domains = [domain.strip() for domain in manual_input.split(",")]
 
     return competitor_domains
-
-# Function to display KPIs
-def display_kpis(stats, domain, backlinks_data=None):
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric(f"Organic Rank ({domain})", stats["averageOrganicRank"])
-    col2.metric(f"Organic Results ({domain})", stats["totalOrganicResults"])
-    col3.metric(f"Organic Clicks ({domain})", stats["monthlyOrganicClicks"])
-    
-    # Calculate and display backlinks KPI
-    if backlinks_data is not None:
-        total_backlinks = len(backlinks_data)
-        col4.metric(f"Total Backlinks ({domain})", total_backlinks)
-    else:
-        col4.metric(f"Total Backlinks ({domain})", "N/A")
 
 # Function to display and collect valuable keywords
 def display_keywords(keywords_data):
@@ -148,8 +284,7 @@ def display_gained_clicks_keywords(gained_keywords_data):
 def handle_excel_upload(file_type):
     uploaded_file = st.file_uploader(f"Upload {file_type} Excel file", type=["xlsx", "xls"], key=f"{file_type}_file")
     if uploaded_file is not None:
-        # Read all sheets into a dictionary of DataFrames
-        df_dict = pd.read_excel(uploaded_file, sheet_name=None)  # Read all sheets
+        df_dict = pd.read_excel(uploaded_file, sheet_name=None)
         return df_dict
     return None
 
@@ -163,17 +298,15 @@ def display_sheet_data(sheet_df, domain_name, data_type):
         st.write(f"No {data_type.lower()} data available for {domain_name}.")
         return pd.DataFrame()
 
+# Function to create a
 # Function to create a downloadable Excel file
 def create_excel(domains_data):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         for domain, data_dict in domains_data.items():
             for sheet_name, df in data_dict.items():
-                try:
-                    sanitized_name = sheet_name+'_'+ domain.split('.')[0]
-                    df.to_excel(writer, sheet_name=sanitized_name[:31], index=False)
-                except: 
-                    break 
+                sanitized_name = sheet_name + '_' + domain.split('.')[0]
+                df.to_excel(writer, sheet_name=sanitized_name[:31], index=False)
     output.seek(0)
     return output
 
@@ -188,7 +321,7 @@ def main():
 
     # Country Code Selection
     country_codes = ['AR', 'AU', 'BR', 'CA', 'DE', 'ES', 'FR', 'IE', 'IN', 'IT', 'JP', 'MX', 'NL', 'NZ', 'SG', 'UA', 'UK', 'US', 'ZA']
-    country_code = st.selectbox("Select Country Code", country_codes, index=6)  # Default to FR
+    country_code = st.selectbox("Select Country Code", country_codes, index=6, key="country_select")  # Default to FR
 
     # Input for competitors
     competitor_domains = get_competitor_domains()
@@ -211,12 +344,11 @@ def main():
 
         # Input for month and year selection
         col1, col2 = st.columns(2)
-        month = col1.selectbox("Select Month", list(range(1, 13)), index=5)  # Default is June (month 6)
-        year = col2.selectbox("Select Year", list(range(2015, 2025)), index=5)  # Default is 2020
+        month = col1.selectbox("Select Month", list(range(1, 13)), index=5, key="month_select")  # Default is June (month 6)
+        year = col2.selectbox("Select Year", list(range(2015, 2025)), index=5, key="year_select")  # Default is 2020
 
-        if st.button("Get SEO Data"):
+        if st.button("Get SEO Data", key="get_seo_data"):
             if api_id and secret_key and domain:
-                # Fetch and display data for main domain first
                 st.subheader(f"KPIs for {domain}")
 
                 # Dictionary to store the main domain's data for export
@@ -309,10 +441,56 @@ def main():
         excel_data = create_excel(domains_data)
         st.download_button(label="Download Excel", data=excel_data, file_name="domains_data.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    # SEA Overview Tab (Placeholder for now)
     with tab2:
-        st.header("SEA Overview")
-        st.write("This section is under construction.")
+        st.subheader("SEA Data")
+        col1, col2 = st.columns(2)
+        month = col1.selectbox("Select Month", list(range(1, 13)), index=5, key="sea_month_select")
+        year = col2.selectbox("Select Year", list(range(2015, 2025)), index=5, key="sea_year_select")
+
+        if st.button("Get SEA Data", key="get_sea_data"):
+            if api_id and secret_key and domain:
+                st.subheader(f"SEA KPIs for {domain}")
+
+                # Fetch and display SEA data for the main domain
+                sea_data = get_sea_stats(domain, api_id, secret_key, month, year, country_code)
+                display_sea_kpis(sea_data, domain)
+
+                # Fetch and display most successful PPC keywords for the main domain
+                ppc_data = get_most_successful_ppc_keywords(domain, api_id, secret_key, country_code)
+                st.subheader(f"Most Successful PPC Keywords for {domain}")
+                display_ppc_keywords(ppc_data)
+
+                # Fetch and display ad history with metrics for the main domain
+                ad_history_data = get_ad_history_with_metrics(domain,api_id, secret_key)
+                st.subheader(f"Keywords Ad History for Competitor {domain}")
+                display_keyword_data(ad_history_data)
+
+                st.subheader(f"Top Ads for Competitor {domain}")
+                display_top_ads(ad_history_data)
+
+                # Loop through competitors
+                for idx, competitor in enumerate(competitor_domains):
+                    st.subheader(f"SEA KPIs for Competitor {idx + 1}: {competitor}")
+
+                    # Fetch and display SEA data for each competitor
+                    competitor_sea_data = get_sea_stats(competitor, api_id, secret_key, month, year, country_code)
+                    display_sea_kpis(competitor_sea_data, competitor)
+
+                    # Fetch and display most successful PPC keywords for each competitor
+                    competitor_ppc_data = get_most_successful_ppc_keywords(competitor, api_id, secret_key, country_code)
+                    st.subheader(f"Most Successful PPC Keywords for Competitor {idx + 1}: {competitor}")
+                    display_ppc_keywords(competitor_ppc_data)
+
+                    # Fetch and display ad history with metrics for each competitor
+                    competitor_ad_history_data = get_ad_history_with_metrics(competitor,api_id, secret_key)
+                    st.subheader(f"Keywords Ad History for Competitor {idx + 1}: {competitor}")
+                    display_keyword_data(competitor_ad_history_data)
+                    
+                    st.subheader(f"Top Ads for Competitor {idx + 1}: {competitor}")
+                    display_top_ads(competitor_ad_history_data)
+
+            else:
+                st.warning("Please enter the API ID, Secret Key, and Domain.")
 
 if __name__ == "__main__":
     main()
