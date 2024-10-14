@@ -71,15 +71,17 @@ def display_keyword_data(ad_history_data):
                     "Ad Title": ad_title,
                     "Ad Body": ad_body,
                     "Ad Position": ad_position,
-                    "Search Date ID": datetime.strptime(str(search_date_id), "%Y%m%d").date()
+                    "Search Date ID": datetime.strptime(str(search_date_id), "%Y%m%d").date() if search_date_id != "N/A" else "N/A"
                 })
 
     # Convert the list to a DataFrame and display it
     if keyword_list:
         df = pd.DataFrame(keyword_list)
         st.dataframe(df, use_container_width=True)
+        return df  # Return the DataFrame
     else:
-        st.write("No data available to display.")
+        st.write("No keyword data available.")
+        return pd.DataFrame()  # Return an empty DataFrame
 
 # Function to display top ads data
 def display_top_ads(ad_history_data):
@@ -95,7 +97,6 @@ def display_top_ads(ad_history_data):
             avg_total_ads = ad.get("avg_total_ads", "N/A")
             coverage = ad.get("coverage", "N/A")
 
-
             # Append all ad-related info into a list
             top_ads_list.append({
                 "Ad ID": ad_id,
@@ -110,8 +111,10 @@ def display_top_ads(ad_history_data):
     if top_ads_list:
         df = pd.DataFrame(top_ads_list)
         st.dataframe(df, use_container_width=True)
+        return df  # Return the DataFrame
     else:
-        st.write("No top ads data available to display.")
+        st.write("No top ads data available.")
+        return pd.DataFrame()  # Return an empty DataFrame
 
 # Function to display PPC keyword data in a table
 def display_ppc_keywords(ppc_data):
@@ -132,7 +135,7 @@ def display_ppc_keywords(ppc_data):
         return df
     else:
         st.write("No PPC keyword data available.")
-        return pd.DataFrame()
+        return pd.DataFrame()  # Return an empty DataFrame
 
 # Function to extract valuable keywords from SpyFu
 def get_valuable_keywords(domain, api_id, secret_key, country_code):
@@ -304,10 +307,12 @@ def create_excel(domains_data):
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         for domain, data_dict in domains_data.items():
             for sheet_name, df in data_dict.items():
-                sanitized_name = sheet_name + '_' + domain.split('.')[0]
-                df.to_excel(writer, sheet_name=sanitized_name[:31], index=False)
+                if df is not None and not df.empty:  # Only write if DataFrame is not empty
+                    sanitized_name = sheet_name + '_' + domain.split('.')[0]
+                    df.to_excel(writer, sheet_name=sanitized_name[:31], index=False)
     output.seek(0)
     return output
+
 
 # Streamlit App
 def main():
