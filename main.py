@@ -447,6 +447,9 @@ def main():
         month = col1.selectbox("Select Month", list(range(1, 13)), index=5, key="sea_month_select")
         year = col2.selectbox("Select Year", list(range(2015, 2025)), index=5, key="sea_year_select")
 
+        # Dictionary to store SEA data for each domain
+        sea_domains_data = {}
+
         if st.button("Get SEA Data", key="get_sea_data"):
             if api_id and secret_key and domain:
                 st.subheader(f"SEA KPIs for {domain}")
@@ -455,45 +458,66 @@ def main():
                 sea_data = get_sea_stats(domain, api_id, secret_key, month, year, country_code)
                 display_sea_kpis(sea_data, domain)
 
+                # Save the main domain's SEA data to the sea_domains_data dictionary
+                domain_sea_data = {}
+
                 # Fetch and display most successful PPC keywords for the main domain
                 ppc_data = get_most_successful_ppc_keywords(domain, api_id, secret_key, country_code)
                 st.subheader(f"Most Successful PPC Keywords for {domain}")
-                display_ppc_keywords(ppc_data)
+                ppc_df = display_ppc_keywords(ppc_data)
+                domain_sea_data['Most Successful PPC Keywords'] = ppc_df
 
                 # Fetch and display ad history with metrics for the main domain
                 ad_history_data = get_ad_history_with_metrics(domain, api_id, secret_key)
                 st.subheader(f"Google Ads History for {domain}")
-                display_keyword_data(ad_history_data)
+                ad_history_df = display_keyword_data(ad_history_data)
+                domain_sea_data['Google Ads History'] = ad_history_df
 
+                # Fetch and display top ads for the main domain
                 st.subheader(f"Top Ads for {domain}")
-                display_top_ads(ad_history_data)
+                top_ads_df = display_top_ads(ad_history_data)
+                domain_sea_data['Top Ads'] = top_ads_df
+
+                # Save the main domain's SEA data to the sea_domains_data dictionary
+                sea_domains_data[domain] = domain_sea_data
 
                 # Loop through competitors
                 for idx, competitor in enumerate(competitor_domains):
                     st.subheader(f"SEA KPIs for Competitor {idx + 1}: {competitor}")
 
+                    # Dictionary to store the competitor's SEA data
+                    competitor_sea_data = {}
+
                     # Fetch and display SEA data for each competitor
-                    competitor_sea_data = get_sea_stats(competitor, api_id, secret_key, month, year, country_code)
-                    display_sea_kpis(competitor_sea_data, competitor)
+                    competitor_sea_data_api = get_sea_stats(competitor, api_id, secret_key, month, year, country_code)
+                    display_sea_kpis(competitor_sea_data_api, competitor)
 
                     # Fetch and display most successful PPC keywords for each competitor
                     competitor_ppc_data = get_most_successful_ppc_keywords(competitor, api_id, secret_key, country_code)
                     st.subheader(f"Most Successful PPC Keywords for Competitor {idx + 1}: {competitor}")
-                    display_ppc_keywords(competitor_ppc_data)
+                    competitor_ppc_df = display_ppc_keywords(competitor_ppc_data)
+                    competitor_sea_data['Most Successful PPC Keywords'] = competitor_ppc_df
 
                     # Fetch and display ad history with metrics for each competitor
                     competitor_ad_history_data = get_ad_history_with_metrics(competitor, api_id, secret_key)
                     st.subheader(f"Google Ads History for Competitor {idx + 1}: {competitor}")
-                    display_keyword_data(competitor_ad_history_data)
-                    
+                    competitor_ad_history_df = display_keyword_data(competitor_ad_history_data)
+                    competitor_sea_data['Google Ads History'] = competitor_ad_history_df
+
+                    # Fetch and display top ads for each competitor
                     st.subheader(f"Top Ads for Competitor {idx + 1}: {competitor}")
-                    display_top_ads(competitor_ad_history_data)
+                    competitor_top_ads_df = display_top_ads(competitor_ad_history_data)
+                    competitor_sea_data['Top Ads'] = competitor_top_ads_df
+
+                    # Save the competitor's SEA data to the sea_domains_data dictionary
+                    sea_domains_data[competitor] = competitor_sea_data
 
     # Allow user to download SEA data as an Excel file
-    if domains_data:
+    if sea_domains_data:
         st.subheader("Download SEA Data as Excel")
-        excel_data_sea = create_excel(domains_data)
+        excel_data_sea = create_excel(sea_domains_data)
         st.download_button(label="Download SEA Excel", data=excel_data_sea, file_name="domains_data_sea.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
 
 if __name__ == "__main__":
     main()
