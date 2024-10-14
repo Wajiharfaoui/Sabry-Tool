@@ -108,7 +108,6 @@ def display_top_ads(ad_history_data):
     # Convert the list to a DataFrame and display it
     if top_ads_list:
         df = pd.DataFrame(top_ads_list)
-        st.subheader("Top Ads")
         st.dataframe(df, use_container_width=True)
     else:
         st.write("No top ads data available to display.")
@@ -462,7 +461,7 @@ def main():
 
                 # Fetch and display ad history with metrics for the main domain
                 ad_history_data = get_ad_history_with_metrics(domain,api_id, secret_key)
-                st.subheader(f"Keywords Ad History for Competitor {domain}")
+                st.subheader(f"Google Ads History for domain {domain}")
                 display_keyword_data(ad_history_data)
 
                 st.subheader(f"Top Ads for Competitor {domain}")
@@ -483,7 +482,7 @@ def main():
 
                     # Fetch and display ad history with metrics for each competitor
                     competitor_ad_history_data = get_ad_history_with_metrics(competitor,api_id, secret_key)
-                    st.subheader(f"Keywords Ad History for Competitor {idx + 1}: {competitor}")
+                    st.subheader(f"Google Ads History for for Competitor {idx + 1}: {competitor}")
                     display_keyword_data(competitor_ad_history_data)
                     
                     st.subheader(f"Top Ads for Competitor {idx + 1}: {competitor}")
