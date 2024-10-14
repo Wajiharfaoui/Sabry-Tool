@@ -349,7 +349,7 @@ def main():
         # Input for month and year selection
         col1, col2 = st.columns(2)
         month = col1.selectbox("Select Month", list(range(1, 13)), index=5, key="month_select")  # Default is June (month 6)
-        year = col2.selectbox("Select Year", list(range(2015, 2025)), index=5, key="year_select")  # Default is 2020
+        year = col2.selectbox("Select Year", list(range(2024, 2025)), index=5, key="year_select")  # Default is 2020
 
         if st.button("Get SEO Data", key="get_seo_data"):
             if api_id and secret_key and domain:
